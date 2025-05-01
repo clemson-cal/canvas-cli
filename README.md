@@ -61,21 +61,28 @@ Create a Markdown file with YAML frontmatter like:
 
 ```markdown
 ---
-name: Assignment Title
-points_possible: 100
+name: Homework 6
+points_possible: 4
 assignment_group_id: 12345
-due_at: January 15, 2023 23:59
+due_at: January 15, 2026 09:30
+submission_types: on_paper
 ---
 
 # Assignment Title
 
 Instructions go here...
+
+Inline LaTeX is marked like this: \( \exp(i\phi) = \cos(\phi) + i \sin(\phi) \)
+
+[Links](the_file_id) to uploaded files (with Canvas preview if PDF) will be supported soon...
 ```
+
+The YAML header contains assignment meta-data. To see allowed keys and values consult the Canvas API docs [here](https://canvas.instructure.com/doc/api/assignments.html).
 
 Then create the assignment:
 
 ```bash
-python canvas.py create assignment assignment.md --publish
+python canvas.py create assignment hw6.md --publish
 ```
 
 ### Upload File
@@ -88,6 +95,12 @@ python canvas.py create file path/to/file.pdf
 
 ```bash
 python canvas.py create assignment_group "Homework"
+```
+
+### Find the Group ID
+
+```bash
+python canvas.py list assignment_groups
 ```
 
 ## Markdown and LaTeX Support
