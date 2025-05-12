@@ -19,9 +19,14 @@ class ListItem(enum.Enum):
     """Enumeration of items that can be listed from Canvas."""
     COURSES = "courses"
     ASSIGNMENTS = "assignments"
+    QUIZZES = "quizzes"
     FILES = "files"
     STUDENTS = "students"
     ASSIGNMENT_GROUPS = "assignment_groups"
+
+
+class DescribeItem(enum.Enum):
+    QUIZ = "quiz"
 
 
 class ConfigItem(enum.Enum):
@@ -36,6 +41,7 @@ class CreateItem(enum.Enum):
     ASSIGNMENT = "assignment"
     ASSIGNMENT_GROUP = "assignment_group"
     FILE = "file"
+    QUIZ = "quiz"
 
 
 #
@@ -338,6 +344,74 @@ def submit_assignment(
         print(f"[green]Assignment created successfully:[/green] {assignment.name} (ID: {assignment.id}) - {status}")
 
 
+def submit_quiz(
+    filename: str,
+    publish: bool = False,
+    edit: bool = False,
+    dry_run: bool = False
+):
+    """
+    Create or update a sample quiz in Canvas from a YAML file
+    """
+    import yaml
+
+    # Parse placement exam configuration
+    with open(filename, "r") as f:
+        questions = yaml.safe_load(f)
+
+    if dry_run:
+        for question in questions:
+            print(question)
+        return
+
+    course = get_course()
+    header = {
+        'title': 'Sample Test Quiz',
+        'description': 'This is a test quiz created via the Canvas API',
+        'quiz_type': 'assignment',
+        'allowed_attempts': 1,
+        'scoring_policy': 'keep_highest',
+        'published': publish
+    }
+    existing_quiz = None
+
+    for quiz in course.get_quizzes():
+        if quiz.title == header['title']:
+            existing_quiz = quiz
+            if not edit:
+                print("[yellow]Quiz exists; use --edit to modify it[/yellow]")
+                return
+            else:
+                break
+
+    if existing_quiz:
+        quiz = existing_quiz.edit(quiz=header)
+        status = "published" if publish else "unpublished"
+        print(f"[green]Quiz updated successfully:[/green] {quiz.title} (ID: {quiz.id}) - {status}")
+    else:
+        quiz = course.create_quiz(header)
+        print(f"[green]Creating new quiz[/green] {quiz.title} (ID: {quiz.id})")
+
+    # Delete all existing questions
+    for question in quiz.get_questions():
+        question.delete()
+
+    def to_canvas_api(question: dict):
+        answers = question['answers']
+        return {
+            'question_name': question['question_name'],
+            'question_text': question['question_text'],
+            'question_type': 'multiple_choice_question',
+            'points_possible': 1,
+            'answers': [dict(text=text, weight=100 if question["correct"] == choice else 0) for choice, text in answers.items()]
+        }
+
+    for question in questions:
+        quiz.create_question(question=to_canvas_api(question))
+
+    print(f"[green]Quiz operation completed successfully with ID: {quiz.id}[/green]")
+
+
 def upload_file(file_path: str, hidden: bool = True, parent_folder_id: int = None):
     """
     Upload a file to the current Canvas course.
@@ -398,6 +472,7 @@ def list(what: ListItem, detail: bool = False):
         detail (bool): Whether to display detailed information about each item
     """
     canvas = get_canvas()
+    course = get_course()
 
     match what:
         case ListItem.COURSES:
@@ -405,7 +480,6 @@ def list(what: ListItem, detail: bool = False):
             for course in courses:
                 print(f"Course ID: {course.id}, Name: {course.name}")
         case ListItem.ASSIGNMENTS:
-            course = get_course()
             assignments = course.get_assignments()
             for assignment in assignments:
                 print(f"Assignment ID: {assignment.id}, Name: {assignment.name}, Submission Types: {assignment.submission_types}")
@@ -414,16 +488,21 @@ def list(what: ListItem, detail: bool = False):
         case ListItem.FILES:
             list_files()
         case ListItem.STUDENTS:
-            course = get_course()
             students = course.get_users(enrollment_type='student')
             for student in students:
                 print(f"Student ID: {student.id}, Name: {student.name}, Email: {getattr(student, 'email', 'N/A')}")
         case ListItem.ASSIGNMENT_GROUPS:
-            course = get_course()
             groups = course.get_assignment_groups()
             for group in groups:
                 weight = getattr(group, 'group_weight', 'N/A')
                 print(f"Group ID: {group.id}, Name: {group.name}, Weight: {weight}")
+        case ListItem.QUIZZES:
+            quizzes = course.get_quizzes()
+            for quiz in quizzes:
+                print(f"Quiz ID: {quiz.id}, Title: {quiz.title}")
+                print(f"  Points: {quiz.points_possible}")
+                print(f"  Due: {quiz.due_at}")
+                print(f"  Published: {quiz.published}")
 
 
 @app.command()
@@ -512,6 +591,8 @@ def create(
             create_assignment_group(arg)
         case CreateItem.FILE:
             upload_file(arg, hidden=not publish)
+        case CreateItem.QUIZ:
+            submit_quiz(filename=arg, publish=publish, edit=edit, dry_run=dry_run)
 
 
 @app.command()
@@ -542,6 +623,40 @@ def gradebook():
 
     for uid in gradebook:
         print(user_map[uid], gradebook[uid])
+
+
+@app.command()
+def describe(what: DescribeItem, canvas_id: int):
+    """
+    Give a description of a particular Canvas item by id number
+
+    Note: presently this function only describes quizzes, but should be
+    expanded to also describe assignments, students, files, etc.
+    """
+    course = get_course()
+
+    match what:
+        case DescribeItem.QUIZ:
+            quiz = course.get_quiz(canvas_id)
+
+            print(f"\nQuiz: {quiz.title}")
+            print(f"Points possible: {quiz.points_possible}")
+            print(f"Description: {quiz.description}")
+            print("\nQuestions:")
+
+            questions = quiz.get_questions()
+            for question in questions:
+                print(f"\nQuestion {question.position}:")
+                print(f"Type: {question.question_type}")
+                print(f"Name: {question.question_name}")
+                print(f"Text: {question.question_text}")
+                print(f"Points: {question.points_possible}")
+
+                if hasattr(question, 'answers') and question.answers:
+                    print("Answers:")
+                    for answer in question.answers:
+                        correct = "✓" if answer.get('weight', 0) > 0 else " "
+                        print(f"  [{correct}] {answer.get('text', 'N/A')}")
 
 
 if __name__ == "__main__":
