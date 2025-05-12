@@ -357,22 +357,19 @@ def submit_quiz(
 
     # Parse placement exam configuration
     with open(filename, "r") as f:
-        questions = yaml.safe_load(f)
+        quiz = yaml.safe_load(f)
+
+    header = {**quiz, "published": publish}
+    header.pop("questions", None)
+    questions = quiz["questions"]
 
     if dry_run:
+        print(header)
         for question in questions:
             print(question)
         return
 
     course = get_course()
-    header = {
-        'title': 'Sample Test Quiz',
-        'description': 'This is a test quiz created via the Canvas API',
-        'quiz_type': 'assignment',
-        'allowed_attempts': 1,
-        'scoring_policy': 'keep_highest',
-        'published': publish
-    }
     existing_quiz = None
 
     for quiz in course.get_quizzes():
