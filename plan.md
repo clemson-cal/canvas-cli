@@ -13,8 +13,9 @@ Complete the tool and publish it on PyPI.
 
 ## Next actions
 
-- [ ] Check name availability on PyPI: `canvas-cli` and `canvas-auto-quiz`
+- [ ] Pick a new distribution name for the core (`canvas-cli` is taken on PyPI); candidates checked available 2026-07-28: `canvas-md`, `md2canvas`, `canvas-course`, `canvas-author`, `canvas-teach`, `canvas-coursekit`, `canvas-courseware`
 - [ ] Test publish both packages to TestPyPI, then real release
+- [x] Check name availability on PyPI: `canvas-cli` and `canvas-auto-quiz`
 - [ ] Reinstall local editable copies (old layout is gone): `python3.11 -m pip install -e packages/canvas-cli -e packages/canvas-auto-quiz`
 - [ ] Update any personal scripts importing `from canvas import ...` → `canvas_cli` / `canvas_auto_quiz`
 - [x] Write/verify `pyproject.toml` metadata (license, classifiers, entry points)
@@ -22,6 +23,10 @@ Complete the tool and publish it on PyPI.
 
 ## Log
 
+- 2026-07-28 — PyPI name check: `canvas-cli` is **taken** (Canvas Medical's
+  EMR CLI, v1.3.4, by Beau Gunderson — also installs a `canvas` console
+  command). `canvas-auto-quiz` is available. Core needs a new distribution
+  name before publishing; the import name `canvas_cli` can stay regardless.
 - 2026-07-28 — Removed `canvas-cli-backup`; the GitHub repo is now the only
   canonical copy. (Older copies in Google Drive under `Teaching/` may still
   exist — delete when next in there.)
