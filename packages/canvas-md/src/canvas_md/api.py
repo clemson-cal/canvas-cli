@@ -12,7 +12,7 @@ from typing import Optional
 
 import requests
 
-from canvas_cli.md2html import convert, DEFAULT_THEME_COLOR
+from canvas_md.md2html import convert, DEFAULT_THEME_COLOR
 
 
 CONFIG_FILE = ".canvas.json"

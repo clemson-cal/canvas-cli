@@ -9,8 +9,8 @@ from importlib.metadata import entry_points
 from pathlib import Path
 from typing import Optional
 
-from canvas_cli.api import CONFIG_FILE, CanvasAPI, get_config
-from canvas_cli.md2html import DEFAULT_THEME_COLOR
+from canvas_md.api import CONFIG_FILE, CanvasAPI, get_config
+from canvas_md.md2html import DEFAULT_THEME_COLOR
 
 
 def _student_sort_key(student: dict) -> str:
@@ -447,12 +447,12 @@ def cmd_up_syllabus(api: CanvasAPI, args) -> int:
 
 #: Entry-point group scanned for plugin subcommands. A plugin package declares
 #:
-#:     [project.entry-points."canvas_cli.commands"]
+#:     [project.entry-points."canvas_md.commands"]
 #:     quiz = "canvas_auto_quiz.cli:register"
 #:
 #: in its pyproject.toml, and its ``register(ctx)`` function is called with a
 #: :class:`CLIContext` when the ``canvas`` command starts up.
-PLUGIN_GROUP = "canvas_cli.commands"
+PLUGIN_GROUP = "canvas_md.commands"
 
 
 @dataclass

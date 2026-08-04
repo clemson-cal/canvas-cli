@@ -1,7 +1,7 @@
 [project]
 name = "canvas-auto-quiz"
 version = "0.1.0"
-description = "Quiz-bank plugin for canvas-cli: write T/F statement pools in markdown and sample them into Canvas quizzes."
+description = "Quiz-bank plugin for canvas-md: write T/F statement pools in markdown and sample them into Canvas quizzes."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { file = "LICENSE" }
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Education",
 ]
 dependencies = [
-    "canvas-cli>=0.3",
+    "canvas-md>=0.3",
 ]
 
 [project.optional-dependencies]
@@ -32,10 +32,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jzrake/canvas-cli"
-Issues = "https://github.com/jzrake/canvas-cli/issues"
+Homepage = "https://github.com/clemson-cal/canvas-md"
+Issues = "https://github.com/clemson-cal/canvas-md/issues"
 
-[project.entry-points."canvas_cli.commands"]
+[project.entry-points."canvas_md.commands"]
 quiz = "canvas_auto_quiz.cli:register"
 
 [build-system]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The ``canvas up quiz`` subcommand, registered into canvas-cli as a plugin."""
+"""The ``canvas up quiz`` subcommand, registered into canvas-md as a plugin."""
 
 import re
 from pathlib import Path
@@ -208,9 +208,9 @@ def cmd_up_quiz(api, args) -> int:
 
 
 def register(ctx) -> None:
-    """canvas-cli plugin hook: add the ``canvas up quiz`` subcommand.
+    """canvas-md plugin hook: add the ``canvas up quiz`` subcommand.
 
-    ``ctx`` is a ``canvas_cli.cli.CLIContext``.
+    ``ctx`` is a ``canvas_md.cli.CLIContext``.
     """
     up_quiz = ctx.up_subparsers.add_parser("quiz", help="Generate and upload quiz from question bank")
     up_quiz.add_argument("file", type=Path, help="Quiz bank markdown file")

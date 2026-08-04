@@ -1,6 +1,6 @@
 # canvas-auto-quiz
 
-A quiz-bank plugin for [canvas-cli](https://pypi.org/project/canvas-cli/). Write pools of true/false statements in markdown, then sample balanced random subsets into a [Canvas LMS](https://www.instructure.com/canvas) quiz — with explanations shown to students as per-answer comments.
+A quiz-bank plugin for [canvas-md](https://pypi.org/project/canvas-md/). Write pools of true/false statements in markdown, then sample balanced random subsets into a [Canvas LMS](https://www.instructure.com/canvas) quiz — with explanations shown to students as per-answer comments.
 
 ## Installation
 
@@ -8,10 +8,10 @@ A quiz-bank plugin for [canvas-cli](https://pypi.org/project/canvas-cli/). Write
 pip install canvas-auto-quiz
 
 # From source (editable)
-pip install -e /path/to/canvas-cli/packages/canvas-auto-quiz
+pip install -e /path/to/canvas-md/packages/canvas-auto-quiz
 ```
 
-Installing the package is all it takes: the `canvas up quiz` subcommand appears automatically (registered through canvas-cli's `canvas_cli.commands` entry-point group). Configuration — API URL, token, course ID — comes from the same `.canvas.json` / environment variables as canvas-cli itself.
+Installing the package is all it takes: the `canvas up quiz` subcommand appears automatically (registered through canvas-md's `canvas_md.commands` entry-point group). Configuration — API URL, token, course ID — comes from the same `.canvas.json` / environment variables as canvas-md itself.
 
 ## Usage
 

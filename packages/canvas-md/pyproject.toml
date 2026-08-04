@@ -1,5 +1,5 @@
 [project]
-name = "canvas-cli"
+name = "canvas-md"
 version = "0.3.0"
 description = "Course-authoring CLI for Canvas LMS: write lectures, homework, and syllabi in markdown and sync them to Canvas."
 readme = "README.md"
@@ -38,12 +38,12 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/jzrake/canvas-cli"
-Issues = "https://github.com/jzrake/canvas-cli/issues"
+Homepage = "https://github.com/clemson-cal/canvas-md"
+Issues = "https://github.com/clemson-cal/canvas-md/issues"
 
 [project.scripts]
-canvas = "canvas_cli.cli:main"
-md2html = "canvas_cli.md2html:main"
+canvas = "canvas_md.cli:main"
+md2html = "canvas_md.md2html:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

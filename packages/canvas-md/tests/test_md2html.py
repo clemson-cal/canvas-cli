@@ -1,6 +1,6 @@
 """Tests for the markdown → Canvas HTML converter."""
 
-from canvas_cli.md2html import convert, apply_inline_styles
+from canvas_md.md2html import convert, apply_inline_styles
 
 
 def write_md(tmp_path, content):

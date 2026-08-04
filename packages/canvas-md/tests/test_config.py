@@ -2,7 +2,7 @@
 
 import json
 
-from canvas_cli import get_config
+from canvas_md import get_config
 
 ENV_VARS = ["CANVAS_API_URL", "CANVAS_API_TOKEN", "CANVAS_COURSE_ID", "CANVAS_THEME_COLOR"]
 

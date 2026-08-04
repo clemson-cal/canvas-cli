@@ -1,10 +1,10 @@
-"""canvas-auto-quiz — quiz-bank plugin for canvas-cli.
+"""canvas-auto-quiz — quiz-bank plugin for canvas-md.
 
 Write pools of true/false statements in markdown, then sample balanced random
 subsets into a Canvas quiz with per-answer explanation comments.
 
-Installing this package adds the ``canvas up quiz`` subcommand to canvas-cli
-(via the ``canvas_cli.commands`` entry-point group).
+Installing this package adds the ``canvas up quiz`` subcommand to canvas-md
+(via the ``canvas_md.commands`` entry-point group).
 
 Public API:
     Question, Statement    — parsed quiz-bank dataclasses.

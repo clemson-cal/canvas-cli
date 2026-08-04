@@ -1,4 +1,4 @@
-# canvas-cli
+# canvas-md
 
 A markdown-first course-authoring CLI for [Canvas LMS](https://www.instructure.com/canvas). Write your lectures, homework, and syllabus in plain markdown and push them to Canvas with a single command. LaTeX math, embedded images, and PDF handouts are handled for you.
 
@@ -15,13 +15,13 @@ Built for instructors who prefer version-controlled markdown over Canvas's rich-
 ## Installation
 
 ```bash
-pip install canvas-cli
+pip install canvas-md
 
 # With the Textual TUI for the gradebook
-pip install "canvas-cli[tui]"
+pip install "canvas-md[tui]"
 
 # From source (editable, recommended while iterating)
-pip install -e /path/to/canvas-cli/packages/canvas-cli
+pip install -e /path/to/canvas-md/packages/canvas-md
 ```
 
 Requires Python 3.10+.
@@ -151,23 +151,23 @@ See [Lecture 5](https://YOUR-INSTITUTION.instructure.com/courses/123456/pages/le
 
 Other packages can add subcommands to the `canvas` CLI. Installing a plugin is enough — its commands appear automatically:
 
-- [`canvas-auto-quiz`](https://github.com/jzrake/canvas-cli) — adds `canvas up quiz`: write pools of T/F statements in markdown and sample them into Canvas quizzes.
+- [`canvas-auto-quiz`](https://github.com/clemson-cal/canvas-md) — adds `canvas up quiz`: write pools of T/F statements in markdown and sample them into Canvas quizzes.
 
-To write your own plugin, declare an entry point in the `canvas_cli.commands` group:
+To write your own plugin, declare an entry point in the `canvas_md.commands` group:
 
 ```toml
-[project.entry-points."canvas_cli.commands"]
+[project.entry-points."canvas_md.commands"]
 mycommand = "my_package.cli:register"
 ```
 
-Your `register(ctx)` function receives a `canvas_cli.cli.CLIContext` with the top-level, `ls`, and `up` subparser objects. Attach a parser and call `set_defaults(func=<handler>, needs_course=<bool>)`; the handler is invoked as `func(api, args) -> int` with a configured `CanvasAPI` (or `api=None` when `args.dry_run` is truthy, in which case no credentials are loaded).
+Your `register(ctx)` function receives a `canvas_md.cli.CLIContext` with the top-level, `ls`, and `up` subparser objects. Attach a parser and call `set_defaults(func=<handler>, needs_course=<bool>)`; the handler is invoked as `func(api, args) -> int` with a configured `CanvasAPI` (or `api=None` when `args.dry_run` is truthy, in which case no credentials are loaded).
 
 ## Python API
 
 The CLI is a thin wrapper over a public Python API:
 
 ```python
-from canvas_cli import CanvasAPI, get_config, convert
+from canvas_md import CanvasAPI, get_config, convert
 from pathlib import Path
 
 config = get_config()  # reads .canvas.json + env vars from cwd
