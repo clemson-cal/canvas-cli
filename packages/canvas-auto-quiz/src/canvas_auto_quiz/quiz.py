@@ -186,12 +186,25 @@ def build_canvas_quiz_data(
     due_at: str = None,
     published: bool = False,
     allowed_attempts: int = 1,
+    unlock_at: str = None,
+    lock_at: str = None,
+    time_limit: int = None,
+    access_code: str = None,
+    one_question_at_a_time: bool = False,
+    cant_go_back: bool = False,
+    shuffle_answers: bool = False,
 ) -> tuple[dict, list[dict]]:
     """Build Canvas API payloads for quiz and questions.
 
     Each bank question becomes one multiple_answers_question with T/F
     checkboxes. Sampling enforces a fixed T/F ratio so the denominator
     (number of True answers) is consistent across questions.
+
+    The ``unlock_at`` / ``lock_at`` / ``time_limit`` / ``access_code`` group
+    exists to support quizzes taken *during class*: a window of a few minutes
+    bounded by an access code announced in the room. The access code is what
+    makes such a quiz in-class rather than take-anywhere; without it, a
+    published quiz is available to anyone who is not there.
 
     Returns:
         (quiz_data, list_of_question_data)
@@ -205,9 +218,22 @@ def build_canvas_quiz_data(
         "quiz[scoring_policy]": "keep_highest",
         "quiz[show_correct_answers]": "true",
         "quiz[show_correct_answers_last_attempt]": "true",
+        "quiz[shuffle_answers]": str(shuffle_answers).lower(),
+        "quiz[one_question_at_a_time]": str(one_question_at_a_time).lower(),
     }
     if due_at:
         quiz_data["quiz[due_at]"] = due_at
+    if unlock_at:
+        quiz_data["quiz[unlock_at]"] = unlock_at
+    if lock_at:
+        quiz_data["quiz[lock_at]"] = lock_at
+    if time_limit is not None:
+        quiz_data["quiz[time_limit]"] = str(time_limit)
+    if access_code:
+        quiz_data["quiz[access_code]"] = access_code
+    # Canvas only honors cant_go_back when questions are shown one at a time.
+    if one_question_at_a_time:
+        quiz_data["quiz[cant_go_back]"] = str(cant_go_back).lower()
 
     question_payloads = []
     for q, statements in quiz_items:

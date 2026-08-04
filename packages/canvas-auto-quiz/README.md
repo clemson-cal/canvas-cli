@@ -30,10 +30,41 @@ Flags:
 - `--questions A,B,C` — select specific question numbers from the bank.
 - `--num-questions N` — randomly select N questions from the bank.
 - `--points P` — total points for the quiz (default 10).
-- `--due M/D/YY` — due date (2:00 PM).
+- `--due DATE` — due date. Accepts `M/D/YY`, optionally with a time: `2/14/26`, `2/14/26 14:05`, `2/14/26 2:05pm`. Without a time, 2:00 PM.
 - `--attempts N` — allowed attempts (default 1; use `-1` for unlimited).
 - `--publish` — publish immediately (default: draft).
 - `--dry-run [html|text]` — preview without uploading (no Canvas credentials needed).
+
+### In-class delivery
+
+For a quiz taken live during a meeting rather than at home:
+
+```bash
+canvas up quiz quiz-bank.md --title "Quiz 3" --points 5 --sample 4 \
+    --unlock "9/8/26 2:10pm" --lock "9/8/26 2:18pm" \
+    --time-limit 8 --access-code ricci \
+    --one-at-a-time --shuffle --publish
+```
+
+- `--unlock DATE` / `--lock DATE` — the window during which the quiz can be taken. Same date syntax as `--due`.
+- `--time-limit MINUTES` — minutes allowed once a student starts.
+- `--access-code CODE` — password announced in the room. **This is what makes a quiz in-class rather than take-anywhere**; without it, a published quiz inside its window is available to anyone, present or not.
+- `--one-at-a-time` — show one question at a time.
+- `--cant-go-back` — disallow returning to a prior question. Requires `--one-at-a-time`, since Canvas ignores it otherwise.
+- `--shuffle` — shuffle answers within each question.
+
+Both `--dry-run` modes print the resulting schedule so you can check it before class:
+
+```
+Delivery:
+  Opens: 2026-09-08T14:10:00
+  Closes: 2026-09-08T14:18:00
+  Time limit (min): 8
+  Access code: ricci
+  Mode: one question at a time, shuffled answers
+```
+
+Timestamps carry no UTC offset; Canvas interprets them in the course's timezone. Bad dates and a `--lock` that precedes `--unlock` are hard errors rather than warnings — a silently dropped window is how an in-class quiz stays open all week.
 
 ## Quiz bank format
 

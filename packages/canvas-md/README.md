@@ -124,6 +124,8 @@ In a homework/assignment file:
 ...
 ```
 
+`**Due**:` accepts `M/D/YY` or `M/D/YYYY`, optionally followed by a time in either 24-hour (`14:05`) or 12-hour (`2:05pm`) form. Without a time it defaults to 2:00 PM. A line that can't be parsed — `**Due**: TBD`, say — warns and is ignored rather than blocking the upload.
+
 ### Math
 
 Inline: `$f(x) = x^2$` · Display: `$$\nabla \cdot \mathbf{E} = 4\pi \rho$$`.
@@ -167,7 +169,7 @@ Your `register(ctx)` function receives a `canvas_md.cli.CLIContext` with the top
 The CLI is a thin wrapper over a public Python API:
 
 ```python
-from canvas_md import CanvasAPI, get_config, convert
+from canvas_md import CanvasAPI, get_config, convert, parse_datetime
 from pathlib import Path
 
 config = get_config()  # reads .canvas.json + env vars from cwd
@@ -183,7 +185,12 @@ api.upload_page(Path("lectures/lecture-05.md"), publish=True)
 
 # Convert markdown to Canvas-ready HTML without uploading
 html = convert(Path("lectures/lecture-05.md"), theme_color="#522d80")
+
+# Parse a course-author date into the ISO8601 Canvas expects
+parse_datetime("9/8/26 2:05pm")   # '2026-09-08T14:05:00'
 ```
+
+Plugins should use `parse_datetime` for their own date options so that the accepted syntax stays identical across the whole CLI. It raises `ValueError` on anything it can't parse; `extract_due_date` is the lenient variant used for `**Due**:` lines in markdown.
 
 ## Per-course workflow
 

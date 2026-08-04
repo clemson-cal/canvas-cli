@@ -4,6 +4,8 @@
 import re
 from pathlib import Path
 
+from canvas_md import parse_datetime, DATE_SYNTAX_HELP
+
 from canvas_auto_quiz.quiz import parse_quiz_bank, sample_quiz, build_canvas_quiz_data
 
 
@@ -20,7 +22,8 @@ def render_quiz_text(title: str, question_payloads: list[dict], total_points: fl
     lines = []
     lines.append(f"{'=' * 60}")
     lines.append(f"  {title}")
-    lines.append(f"  {len(question_payloads)} statements · {total_points:.1f} pts total · {points_per_statement:.4f} per statement")
+    total_statements = sum(len(qp["answers"]) for qp in question_payloads)
+    lines.append(f"  {len(question_payloads)} questions · {total_statements} statements · {total_points:.1f} pts total · {points_per_statement:.4f} per statement")
     lines.append(f"{'=' * 60}")
 
     for i, qp in enumerate(question_payloads, 1):
@@ -105,10 +108,42 @@ def render_quiz_html(title: str, question_payloads: list[dict], total_points: fl
 </style>
 </head><body>
 <h1>{title}</h1>
-<p class="subtitle">{len(question_payloads)} statements &middot; {total_points:.1f} points total &middot; {points_per_statement:.4f} per statement</p>
+<p class="subtitle">{len(question_payloads)} questions &middot; {sum(len(qp["answers"]) for qp in question_payloads)} statements &middot; {total_points:.1f} points total &middot; {points_per_statement:.4f} per statement</p>
 <div class="legend">&#x2611; = correct &nbsp;&nbsp; &#x2610; = incorrect &nbsp;&nbsp; <span style="background:#eef6ee;padding:0.1em 0.4em;border-radius:3px;">green box</span> = explanation shown to student</div>
 {body}
 </body></html>"""
+
+
+def render_delivery_summary(quiz_data: dict) -> str:
+    """Summarize the scheduling settings, read back off the Canvas payload.
+
+    Derived from ``quiz_data`` rather than from ``args`` so that what is
+    printed is what is actually sent — worth the indirection for settings you
+    only find out were wrong once a room full of students cannot start.
+    """
+    lines = [
+        f"  {label}: {quiz_data[key]}"
+        for key, label in (
+            ("quiz[unlock_at]", "Opens"),
+            ("quiz[lock_at]", "Closes"),
+            ("quiz[due_at]", "Due"),
+            ("quiz[time_limit]", "Time limit (min)"),
+            ("quiz[access_code]", "Access code"),
+        )
+        if quiz_data.get(key)
+    ]
+    modes = [
+        name
+        for key, name in (
+            ("quiz[one_question_at_a_time]", "one question at a time"),
+            ("quiz[cant_go_back]", "no going back"),
+            ("quiz[shuffle_answers]", "shuffled answers"),
+        )
+        if quiz_data.get(key) == "true"
+    ]
+    if modes:
+        lines.append(f"  Mode: {', '.join(modes)}")
+    return "\n".join(lines)
 
 
 def cmd_up_quiz(api, args) -> int:
@@ -142,15 +177,23 @@ def cmd_up_quiz(api, args) -> int:
         print("Error: No questions matched the selection")
         return 1
 
-    # Build due date
-    due_at = None
-    if args.due:
-        due_match = re.match(r'(\d{1,2})/(\d{1,2})/(\d{2,4})', args.due)
-        if due_match:
-            month, day, year = due_match.groups()
-            if len(year) == 2:
-                year = "20" + year
-            due_at = f"{year}-{int(month):02d}-{int(day):02d}T14:00:00"
+    # Parse the scheduling window. A bad date here is loud on purpose: a
+    # silently-dropped --lock is how an in-class quiz stays open all week.
+    try:
+        due_at = parse_datetime(args.due)
+        unlock_at = parse_datetime(args.unlock)
+        lock_at = parse_datetime(args.lock)
+    except ValueError as exc:
+        print(f"Error: {exc}")
+        return 1
+
+    if unlock_at and lock_at and lock_at <= unlock_at:
+        print(f"Error: --lock ({lock_at}) is not after --unlock ({unlock_at}).")
+        return 1
+
+    if args.cant_go_back and not args.one_at_a_time:
+        print("Error: --cant-go-back requires --one-at-a-time; Canvas ignores it otherwise.")
+        return 1
 
     # Compute points per statement from total
     total_statements = sum(len(stmts) for _, stmts in quiz_items)
@@ -164,13 +207,25 @@ def cmd_up_quiz(api, args) -> int:
         due_at=due_at,
         published=args.publish,
         allowed_attempts=args.attempts,
+        unlock_at=unlock_at,
+        lock_at=lock_at,
+        time_limit=args.time_limit,
+        access_code=args.access_code,
+        one_question_at_a_time=args.one_at_a_time,
+        cant_go_back=args.cant_go_back,
+        shuffle_answers=args.shuffle,
     )
+
+    delivery = render_delivery_summary(quiz_data)
 
     # Dry-run: render preview without uploading
     dry_run = getattr(args, 'dry_run', None)
     if dry_run:
         if dry_run == 'text':
             print(render_quiz_text(args.title, question_payloads, args.points, points_per_statement))
+            if delivery:
+                print("Delivery:")
+                print(delivery)
         else:
             import tempfile
             import webbrowser
@@ -178,8 +233,11 @@ def cmd_up_quiz(api, args) -> int:
             with tempfile.NamedTemporaryFile('w', suffix='.html', delete=False) as f:
                 f.write(html)
                 html_path = f.name
-            print(f"Rendered {len(question_payloads)} statements to {html_path}")
+            print(f"Rendered {len(question_payloads)} questions to {html_path}")
             print(f"{args.points:.1f} points total ({points_per_statement:.4f} per statement)")
+            if delivery:
+                print("Delivery:")
+                print(delivery)
             webbrowser.open(f"file://{html_path}")
         return 0
 
@@ -203,6 +261,9 @@ def cmd_up_quiz(api, args) -> int:
     print(f"\nQuiz has {len(question_payloads)} questions, {total_statements} statements, {args.points:.1f} points total ({points_per_statement:.4f} per statement)")
     if args.seed is not None:
         print(f"Random seed: {args.seed}")
+    if delivery:
+        print("Delivery:")
+        print(delivery)
 
     return 0
 
@@ -220,8 +281,21 @@ def register(ctx) -> None:
     up_quiz.add_argument("--questions", type=str, default=None, help="Comma-separated question numbers (default: all)")
     up_quiz.add_argument("--num-questions", type=int, default=None, dest="num_questions", help="Randomly select this many questions from the bank (default: all)")
     up_quiz.add_argument("--points", type=float, default=10.0, help="Total points for the quiz (default: 10.0)")
-    up_quiz.add_argument("--due", type=str, default=None, help="Due date (M/D/YY)")
+    up_quiz.add_argument("--due", type=str, default=None, help=f"Due date — {DATE_SYNTAX_HELP}")
     up_quiz.add_argument("--attempts", type=int, default=1, help="Allowed attempts (default: 1, use -1 for unlimited)")
     up_quiz.add_argument("--publish", action="store_true", help="Publish immediately")
+
+    in_class = up_quiz.add_argument_group(
+        "in-class delivery",
+        "Controls for a quiz taken live during a meeting: a short window, "
+        "bounded by an access code announced in the room.",
+    )
+    in_class.add_argument("--unlock", type=str, default=None, help=f"Quiz opens at — {DATE_SYNTAX_HELP}")
+    in_class.add_argument("--lock", type=str, default=None, help=f"Quiz closes at — {DATE_SYNTAX_HELP}")
+    in_class.add_argument("--time-limit", type=int, default=None, dest="time_limit", help="Minutes allowed once started")
+    in_class.add_argument("--access-code", type=str, default=None, dest="access_code", help="Password announced in class")
+    in_class.add_argument("--one-at-a-time", action="store_true", dest="one_at_a_time", help="Show one question at a time")
+    in_class.add_argument("--cant-go-back", action="store_true", dest="cant_go_back", help="Disallow returning to a prior question (requires --one-at-a-time)")
+    in_class.add_argument("--shuffle", action="store_true", help="Shuffle answers within each question")
     up_quiz.add_argument("--dry-run", nargs='?', const='html', choices=['html', 'text'], help="Preview without uploading: 'html' (default) opens browser, 'text' prints to terminal")
     up_quiz.set_defaults(func=cmd_up_quiz, needs_course=True)

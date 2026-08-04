@@ -12,6 +12,7 @@ from typing import Optional
 
 import requests
 
+from canvas_md.dates import extract_due_date
 from canvas_md.md2html import convert, DEFAULT_THEME_COLOR
 
 
@@ -486,15 +487,8 @@ class CanvasAPI:
                 name = line[2:].strip()
                 break
 
-        # Extract due date (format: **Due**: M/D/YY)
-        due_at = None
-        due_match = re.search(r'\*\*Due\*\*:\s*(\d{1,2})/(\d{1,2})/(\d{2,4})', md_content)
-        if due_match:
-            month, day, year = due_match.groups()
-            if len(year) == 2:
-                year = "20" + year
-            # Canvas expects ISO8601, set to 2:00 PM local time
-            due_at = f"{year}-{int(month):02d}-{int(day):02d}T14:00:00"
+        # Extract due date (format: **Due**: M/D/YY, with an optional time)
+        due_at = extract_due_date(md_content, source=md_path.name)
 
         # Extract points (format: **Points**: N)
         points_match = re.search(r'\*\*Points\*\*:\s*(\d+(?:\.\d+)?)', md_content)

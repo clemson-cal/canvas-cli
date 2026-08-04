@@ -91,3 +91,55 @@ def test_build_canvas_quiz_data(tmp_path):
 def test_convert_text_math_delimiters():
     assert convert_text("flux $4\\pi q$ here") == "flux \\(4\\pi q\\) here"
     assert convert_text("$$E = mc^2$$") == "\\[E = mc^2\\]"
+
+
+def test_delivery_defaults_are_off(tmp_path):
+    questions = parse_quiz_bank(write_bank(tmp_path))
+    items = sample_quiz(questions, sample_size=2, seed=1)
+    quiz_data, _ = build_canvas_quiz_data(title="Q", quiz_items=items)
+    assert quiz_data["quiz[one_question_at_a_time]"] == "false"
+    assert quiz_data["quiz[shuffle_answers]"] == "false"
+    for absent in ("quiz[unlock_at]", "quiz[lock_at]", "quiz[time_limit]",
+                   "quiz[access_code]", "quiz[cant_go_back]"):
+        assert absent not in quiz_data
+
+
+def test_in_class_delivery_fields(tmp_path):
+    questions = parse_quiz_bank(write_bank(tmp_path))
+    items = sample_quiz(questions, sample_size=2, seed=1)
+    quiz_data, _ = build_canvas_quiz_data(
+        title="Quiz 1",
+        quiz_items=items,
+        unlock_at="2026-09-08T14:10:00",
+        lock_at="2026-09-08T14:18:00",
+        time_limit=8,
+        access_code="ricci",
+        one_question_at_a_time=True,
+        cant_go_back=True,
+        shuffle_answers=True,
+    )
+    assert quiz_data["quiz[unlock_at]"] == "2026-09-08T14:10:00"
+    assert quiz_data["quiz[lock_at]"] == "2026-09-08T14:18:00"
+    assert quiz_data["quiz[time_limit]"] == "8"
+    assert quiz_data["quiz[access_code]"] == "ricci"
+    assert quiz_data["quiz[one_question_at_a_time]"] == "true"
+    assert quiz_data["quiz[cant_go_back]"] == "true"
+    assert quiz_data["quiz[shuffle_answers]"] == "true"
+
+
+def test_cant_go_back_omitted_unless_one_at_a_time(tmp_path):
+    """Canvas ignores cant_go_back on an all-at-once quiz; don't send a lie."""
+    questions = parse_quiz_bank(write_bank(tmp_path))
+    items = sample_quiz(questions, sample_size=2, seed=1)
+    quiz_data, _ = build_canvas_quiz_data(
+        title="Q", quiz_items=items, cant_go_back=True, one_question_at_a_time=False,
+    )
+    assert "quiz[cant_go_back]" not in quiz_data
+
+
+def test_time_limit_zero_is_sent(tmp_path):
+    """0 is a real value (no limit), distinct from 'unset' — must not be dropped."""
+    questions = parse_quiz_bank(write_bank(tmp_path))
+    items = sample_quiz(questions, sample_size=2, seed=1)
+    quiz_data, _ = build_canvas_quiz_data(title="Q", quiz_items=items, time_limit=0)
+    assert quiz_data["quiz[time_limit]"] == "0"

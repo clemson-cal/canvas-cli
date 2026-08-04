@@ -30,9 +30,45 @@ feature set settles; until then, drive changes from teaching needs.
 - [ ] Update any personal scripts importing `from canvas import ...` → `canvas_md` / `canvas_auto_quiz`
 - [x] Write/verify `pyproject.toml` metadata (license, classifiers, entry points)
 - [x] README with install + usage examples
+- [x] In-class delivery controls for `canvas up quiz` (window, access code, time limit, one-at-a-time, shuffle)
+- [ ] Numeric-answer question type with a tolerance, for order-of-magnitude estimation items — needs a bank-format decision first (see 2026-08-04 log)
+- [ ] Decide whether GR 9660 quiz banks live in the course repo or here as examples
 
 ## Log
 
+- 2026-08-04 — **In-class delivery controls** for `canvas up quiz`, driven by
+  GR 9660 (Fall '26): that course's 10 graded quizzes are taken during class on
+  students' own devices, so a quiz needs a window and a door. Added
+  `--unlock` / `--lock` / `--time-limit` / `--access-code` / `--one-at-a-time` /
+  `--cant-go-back` / `--shuffle`, all plain fields on the Canvas quiz object.
+  The access code is the load-bearing one — it is what makes a quiz *in-class*
+  rather than take-anywhere.
+  - Extracted date parsing into **`canvas_md.dates`** (core, exported as
+    `parse_datetime`) because the M/D/YY logic was duplicated in `api.py` and
+    the plugin's `cli.py`, and neither supported a time of day — which a
+    six-minute quiz window obviously needs. Now accepts `9/8/26`,
+    `9/8/26 14:05`, `9/8/26 2:05pm`. Plugins should use it so the accepted
+    syntax stays uniform across the CLI.
+  - **Two error philosophies, deliberately.** CLI flags raise on an
+    unparseable date; `**Due**:` lines in markdown warn and continue via
+    `extract_due_date`. A hand-edited file may legitimately say `TBD`, whereas
+    a typo'd `--lock` means the window silently never closes. Routing the
+    markdown path through the strict parser was a real regression I introduced
+    and then backed out — worth not re-introducing.
+  - `cant_go_back` is only sent when `one_question_at_a_time` is set, since
+    Canvas ignores it otherwise; the CLI rejects the combination rather than
+    accepting a flag that quietly does nothing.
+  - Fixed a pre-existing mislabel: both dry-run previews counted *questions*
+    but printed "statements".
+  - Tests 12 → 41.
+- 2026-08-04 — **Deferred**: numeric-answer questions with a tolerance, for
+  order-of-magnitude estimation ("strain from this binary at 100 Mpc, within a
+  factor of 2"). Blocked on a bank-format decision, not on plumbing: the
+  current grammar is `- [x]` / `- [ ]` checkboxes, which has no room for a
+  value, a unit, and a tolerance. Unlike the delivery flags this changes the
+  authoring format, so it wants a deliberate choice rather than an invented
+  one. Canvas supports `numerical_question` with exact/range/precision
+  answers, so the API side is straightforward once the syntax is settled.
 - 2026-08-04 — **Deferred the PyPI release.** Holding off until the feature set
   stabilizes with respect to the requirements of the current teaching
   assignment. Rationale: publishing fixes the CLI surface and the
