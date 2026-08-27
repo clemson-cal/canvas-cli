@@ -90,6 +90,37 @@ def parse_datetime(value: Optional[str], default_time=DEFAULT_TIME) -> Optional[
 
 _DUE_LINE_RE = re.compile(r"\*\*Due\*\*:\s*(.+?)\s*$", re.MULTILINE)
 
+#: Inline markup that may trail a metadata line. A ``**Due**:`` line often sits
+#: in a block of ``**Key**: value<br>`` lines, and the line-ending tag would
+#: otherwise be captured as part of the date.
+_TRAILING_MARKUP_RE = re.compile(
+    r"(?:\s*(?:<\s*br\s*/?\s*>|&nbsp;|\\))+\s*$",
+    re.IGNORECASE,
+)
+
+#: A date wrapped in emphasis, e.g. ``**Due**: **9/3/26**``.
+_EMPHASIS_RE = re.compile(r"^([*_]{1,3})(?![*_])(.+?)(?<![*_])\1$")
+
+
+def strip_inline_markup(value: str) -> str:
+    """Remove inline markdown/HTML decoration from a metadata line's value.
+
+    Handles the two ways a hand-written line picks up markup that is not part
+    of the value: a trailing line-break tag (``<br>``, ``<br/>``, a backslash,
+    ``&nbsp;``), and emphasis wrapped around the whole value.
+
+    Args:
+        value: Raw text captured after ``**Key**:``.
+
+    Returns:
+        The value with decoration removed.
+    """
+    value = _TRAILING_MARKUP_RE.sub("", value).strip()
+    match = _EMPHASIS_RE.match(value)
+    if match:
+        value = match.group(2).strip()
+    return value
+
 
 def extract_due_date(md_content: str, source: str = "markdown") -> Optional[str]:
     """Pull a ``**Due**: ...`` line out of markdown, leniently.
@@ -110,7 +141,7 @@ def extract_due_date(md_content: str, source: str = "markdown") -> Optional[str]
     if not match:
         return None
     try:
-        return parse_datetime(match.group(1))
+        return parse_datetime(strip_inline_markup(match.group(1)))
     except ValueError as exc:
         warnings.warn(f"{source}: ignoring unparseable due date — {exc}")
         return None

@@ -36,6 +36,25 @@ feature set settles; until then, drive changes from teaching needs.
 
 ## Log
 
+- 2026-08-27 — **`**Due**` lines silently lost their date to trailing markup.**
+  Found while pushing GR 9660's Homework 1: the header was written
+  `**Due**: 9/3/26<br>`, copying the `<br>` style from that course's
+  `syllabus.md`. `_DUE_LINE_RE` captures to end of line, so the tag became part
+  of the date, `parse_datetime` rejected it, and `extract_due_date` dropped it
+  with only a `warnings.warn`. The assignment uploaded looking complete, with
+  no due date at all — the exact silent-loss failure `parse_datetime`'s
+  docstring says to avoid. Fixed with a `strip_inline_markup()` applied on the
+  markdown path only: trailing `<br>` / `<br/>` / `\` / `&nbsp;`, plus
+  emphasis wrapped around the whole value. Command-line flags keep the strict
+  path, where markup would be a genuine typo.
+
+  Deliberately *not* changed: unparseable-but-present values still warn rather
+  than raise. `test_unparseable_warns_but_does_not_raise` documents
+  `**Due**: TBD` as a legitimate thing to write while drafting, and turning
+  every typo into a hard error would break that. The remaining exposure is a
+  real typo (`**Due**: 9/32/26`) still uploading quietly. Worth revisiting if
+  it ever bites — the distinction would be placeholder words vs. anything else.
+
 - 2026-08-04 — **In-class delivery controls** for `canvas up quiz`, driven by
   GR 9660 (Fall '26): that course's 10 graded quizzes are taken during class on
   students' own devices, so a quiz needs a window and a door. Added
