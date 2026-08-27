@@ -2,7 +2,7 @@
 
 import pytest
 
-from canvas_md.dates import parse_datetime, extract_due_date
+from canvas_md.dates import parse_datetime, extract_due_date, strip_inline_markup
 
 
 class TestDateOnly:
@@ -85,3 +85,58 @@ class TestExtractDueDate:
     def test_warning_names_the_file(self):
         with pytest.warns(UserWarning, match="hw3.md"):
             extract_due_date("**Due**: whenever\n", source="hw3.md")
+
+
+class TestStripInlineMarkup:
+    @pytest.mark.parametrize("raw,expected", [
+        ("9/3/26", "9/3/26"),
+        ("9/3/26<br>", "9/3/26"),
+        ("9/3/26<br/>", "9/3/26"),
+        ("9/3/26<br />", "9/3/26"),
+        ("9/3/26 <BR>", "9/3/26"),
+        ("9/3/26\\", "9/3/26"),
+        ("9/3/26&nbsp;", "9/3/26"),
+        ("9/3/26<br><br>", "9/3/26"),
+        ("**9/3/26**", "9/3/26"),
+        ("*9/3/26*", "9/3/26"),
+        ("_9/3/26_", "9/3/26"),
+        ("**9/3/26**<br>", "9/3/26"),
+    ])
+    def test_decoration_removed(self, raw, expected):
+        assert strip_inline_markup(raw) == expected
+
+    def test_mismatched_emphasis_left_alone(self):
+        assert strip_inline_markup("**9/3/26*") == "**9/3/26*"
+
+
+class TestDueLineWithMarkup:
+    """A **Due** line often sits in a block of '**Key**: value<br>' lines.
+
+    The line-ending tag used to be captured as part of the date, which failed
+    to parse and was dropped with only a warning — so the assignment uploaded
+    looking complete but with no due date at all.
+    """
+
+    @pytest.mark.parametrize("line", [
+        "**Due**: 9/3/26<br>",
+        "**Due**: 9/3/26<br/>",
+        "**Due**: 9/3/26 <br />",
+        "**Due**: **9/3/26**",
+    ])
+    def test_markup_does_not_defeat_the_date(self, line):
+        assert extract_due_date(line + "\n") == "2026-09-03T14:00:00"
+
+    def test_time_survives_markup(self):
+        assert extract_due_date("**Due**: 9/3/26 11:59pm<br>\n") == "2026-09-03T23:59:00"
+
+    def test_placeholder_still_warns(self):
+        with pytest.warns(UserWarning, match="unparseable due date"):
+            assert extract_due_date("**Due**: TBD<br>\n", source="hw3.md") is None
+
+    def test_syllabus_style_block(self):
+        md = (
+            "# Homework 01\n\n"
+            "**Due**: 9/3/26<br>\n"
+            "**Points**: 4\n"
+        )
+        assert extract_due_date(md) == "2026-09-03T14:00:00"
